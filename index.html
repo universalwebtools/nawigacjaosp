@@ -21,7 +21,7 @@ header {
   border-bottom:1px solid var(--border);
 }
 .wrap { max-width:1180px; margin:0 auto; padding:14px 16px; }
-.top { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
+.top { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
 .brand { display:flex; align-items:center; gap:12px; }
 .brand img { width:98px; height:98px; border-radius:14px; background:#111; border:1px solid rgba(255,255,255,.08); object-fit:contain; }
 h1 { margin:0; font-size:18px; }
@@ -61,7 +61,6 @@ h1 { margin:0; font-size:18px; }
 }
 .hotlineBtn strong { font-size:13px; letter-spacing:.2px; }
 .hotlineBtn:hover { filter:brightness(1.08); }
-.hotlineBar::-webkit-scrollbar{ display:none; }
 @media (max-width:640px) {
   .hotlineBtn { flex-basis:100%; }
 }
@@ -84,7 +83,7 @@ input[type="search"] { min-width:270px; }
 .btn:hover { filter:brightness(1.08); }
 .btn.accent { background:linear-gradient(180deg,var(--accent2),var(--accent)); border:none; }
 .btn.small { padding:7px 10px; border-radius:10px; font-size:12px; }
-#installBtn{ display:inline-block; }
+#installBtn { display:none; }
 
 .tabs {
   position:sticky; top:var(--headerH, 86px); z-index:40;
@@ -197,55 +196,56 @@ input[type="search"] { min-width:270px; }
   .contactRow .rowBtns{ justify-content:flex-end; }
 }
 
-/* === Mobile readability upgrades === */
-.hotlineWrap{ margin-top:10px; display:flex; align-items:center; gap:10px; }
-.hotlineToggle{ display:none; }
-.quickList{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-.quickBtn{
-  display:flex; justify-content:space-between; align-items:center; gap:10px;
-  padding:10px 12px; border-radius:12px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.12);
-  color:#fff; text-decoration:none; font-weight:800;
-}
-.quickBtn span{ font-weight:700; color:rgba(255,255,255,.88); }
-.quickBtn strong{ font-size:14px; }
+/* ===== Mobile UX tweaks ===== */
+#contactsBtn{ display:none; }
+@media (max-width:760px){
+  /* na telefonach chowamy długą belkę z numerami, używamy przycisku 📞 */
+  .hotlineBar{ display:none !important; }
+  #contactsBtn{ display:inline-block; }
 
-.deviceGrid{ display:grid; grid-template-columns:1fr; gap:10px; }
-.deviceCard{
-  text-align:left; padding:12px; border-radius:14px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.12);
-  color:#fff; cursor:pointer;
+  /* mniejsze logo i mniej wysokości nagłówka */
+  .brand img{ width:54px !important; height:54px !important; }
+  .meta{ display:none; } /* zostawiamy tylko tytuł na telefonie */
 }
-.deviceCard:hover{ filter:brightness(1.06); }
-.dTitle{ font-weight:950; font-size:14px; }
-.dSub{ color:var(--muted); font-size:12px; margin-top:2px; }
 
+/* Zakładki zakresów w jednym rzędzie (scroll poziomy) */
 .tabsInner{
+  justify-content:flex-start !important;
   flex-wrap:nowrap !important;
   overflow-x:auto;
-  justify-content:flex-start;
-  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+  gap:8px !important;
 }
 .tabsInner::-webkit-scrollbar{ display:none; }
 .tab{ flex:0 0 auto; }
 
-@media (max-width:720px){
-  .wrap{ padding:10px 12px; }
-  .brand img{ width:64px; height:64px; }
-  h1{ font-size:16px; }
-  .meta{ font-size:11px; }
-  .hint{ font-size:11px; padding:0 12px 10px; }
-  .hotlineBar{ display:none !important; }
-  .hotlineToggle{ display:inline-flex; }
-  .tabsInner{ padding:8px 10px; gap:8px; }
-  .tab{ padding:8px 12px; min-width:auto; }
+/* Kontakty overlay */
+.contactsQuickList{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
 }
-@media (min-width:721px){
-  .hotlineToggle{ display:none; }
-  .hotlineBar{ display:flex; }
+.quickBtn{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  text-decoration:none;
+  color:#fff;
+  background:#1c1f26;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;
+  padding:10px 12px;
+  font-weight:800;
+  font-size:13px;
+  gap:10px;
 }
+.quickBtn strong{ font-size:13px; opacity:.92; }
+@media (max-width:420px){
+  .contactsQuickList{ grid-template-columns:1fr; }
+}
+
+/* iOS safe-area */
+body{ padding-bottom: env(safe-area-inset-bottom); }
 
 </style>
 </head>
@@ -264,6 +264,7 @@ input[type="search"] { min-width:270px; }
       </div>
       <div class="controls">
         <input id="searchInput" type="search" placeholder="Szukaj numeru lub opisu (np. 41, szkoła)">
+        <button class="btn" id="contactsBtn">📞 Numery</button>
         <button class="btn" id="adminBtn">ADMIN</button>
         <button class="btn" id="mapBtn">MAPA e-remiza</button>
         <button class="btn" id="targeoBtn">TARGEO</button>
@@ -271,69 +272,9 @@ input[type="search"] { min-width:270px; }
       </div>
     </div>
 
-    <div class="hotlineWrap">
-      <button class="btn small hotlineToggle" id="hotlineToggle" type="button">📞 Numery</button>
-      <div class="hotlineBar" id="hotlineBar"></div>
-    </div>
+    <div class="hotlineBar" id="hotlineBar"></div>
   </div>
 </header>
-
-
-<!-- Kontakty (szybkie wybieranie) -->
-<div class="overlay" id="contactsOverlay" style="display:none">
-  <div class="modal" style="width:min(95vw,520px)">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-      <h3 style="margin:0">Numery alarmowe / operacyjne</h3>
-      <button class="btn small" id="contactsCloseBtn" type="button">Zamknij</button>
-    </div>
-    <div class="tiny" style="margin-top:6px">Kliknij kontakt, aby zadzwonić.</div>
-    <div id="contactsQuickList" class="quickList" style="margin-top:10px"></div>
-  </div>
-</div>
-
-<!-- Instalacja PWA (pomoc) -->
-<div class="overlay" id="installHelpOverlay" style="display:none">
-  <div class="modal" style="width:min(95vw,560px)">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-      <h3 style="margin:0">Instalacja aplikacji</h3>
-      <button class="btn small" id="installHelpCloseBtn" type="button">Zamknij</button>
-    </div>
-    <div id="installHelpBody" class="tiny" style="margin-top:10px;line-height:1.5"></div>
-
-    <div class="actions" style="margin-top:12px">
-      <button class="btn" id="devicePickBtn" type="button">Zmień typ telefonu</button>
-      <button class="btn accent" id="installTryBtn" type="button">Spróbuj instalacji</button>
-    </div>
-  </div>
-</div>
-
-<!-- Wybór urządzenia (pierwsze wejście) -->
-<div class="overlay" id="deviceOverlay" style="display:none">
-  <div class="modal" style="width:min(95vw,560px)">
-    <h3 style="margin:0 0 8px">Wybierz telefon</h3>
-    <div class="tiny" style="margin-bottom:10px">To tylko po to, żeby wyświetlić właściwą instrukcję instalacji PWA.</div>
-
-    <div class="deviceGrid">
-      <button class="deviceCard" data-device="android" type="button">
-        <div class="dTitle">Android</div>
-        <div class="dSub">Chrome / Samsung / Xiaomi / Pixel</div>
-      </button>
-      <button class="deviceCard" data-device="ios" type="button">
-        <div class="dTitle">iPhone / iPad (iOS)</div>
-        <div class="dSub">Dodaj do ekranu startowego</div>
-      </button>
-      <button class="deviceCard" data-device="other" type="button">
-        <div class="dTitle">Huawei / inne</div>
-        <div class="dSub">Zależnie od przeglądarki</div>
-      </button>
-    </div>
-
-    <div class="actions" style="margin-top:12px">
-      <button class="btn" id="deviceSkipBtn" type="button">Nie pokazuj więcej</button>
-    </div>
-  </div>
-</div>
-
 
 <div class="tabs" id="rangeTabs"><div class="tabsInner" id="tabs"></div></div>
 <div class="hint">Wyszukiwanie działa po numerze i opisie. MAPA e-remiza pokazuje podgląd okolicy (bez pinezek).</div>
@@ -521,15 +462,20 @@ function renderHotlineBar(){
       a.textContent = label || tel;
     }
 
-function renderContactsQuick(){
+    bar.appendChild(a);
+  });
+
+  if(typeof updateStickyOffsets === 'function'){ updateStickyOffsets(); }
+}
+
+function renderContactsQuickOverlay(){
   const box = document.getElementById('contactsQuickList');
   if(!box) return;
   box.innerHTML = '';
-  CONTACTS.forEach(c=>{
+  (CONTACTS||[]).forEach(c=>{
     const label = (c.label||'').trim();
     const tel = (c.tel||'').trim();
     if(!label && !tel) return;
-
     const a = document.createElement('a');
     a.className = 'quickBtn';
     const shownLabel = (label && tel && label !== tel) ? label : (label || tel);
@@ -541,29 +487,22 @@ function renderContactsQuick(){
 }
 
 const contactsOverlay = document.getElementById('contactsOverlay');
+const contactsBtn = document.getElementById('contactsBtn');
 const contactsCloseBtn = document.getElementById('contactsCloseBtn');
-const hotlineToggle = document.getElementById('hotlineToggle');
-
 function openContacts(){
   if(!contactsOverlay) return;
-  renderContactsQuick();
   contactsOverlay.style.display = 'flex';
+  renderContactsQuickOverlay();
 }
 function closeContacts(){
   if(!contactsOverlay) return;
   contactsOverlay.style.display = 'none';
 }
-if(hotlineToggle){ hotlineToggle.addEventListener('click', openContacts); }
-if(contactsCloseBtn){ contactsCloseBtn.addEventListener('click', closeContacts); }
-if(contactsOverlay){
-  contactsOverlay.addEventListener('click', (e)=>{ if(e.target===contactsOverlay) closeContacts(); });
-}
+if(contactsBtn) contactsBtn.addEventListener('click', openContacts);
+if(contactsCloseBtn) contactsCloseBtn.addEventListener('click', closeContacts);
+if(contactsOverlay) contactsOverlay.addEventListener('click', (e)=>{ if(e.target===contactsOverlay) closeContacts(); });
 
-    bar.appendChild(a);
-  });
 
-  if(typeof updateStickyOffsets === 'function'){ updateStickyOffsets(); }
-}
 
 // --- Admin UI: edycja listy kontaktów ---
 function contactsRowTemplate(idx, c){
@@ -1056,127 +995,99 @@ document.getElementById('centerMapBtn').onclick = () => {
   }, 150);
 };
 
-/* ===== PWA install (Android + iOS + Huawei) ===== */
+/* ===== PWA install (Android/iOS) ===== */
 let deferredPrompt = null;
 const installBtn = document.getElementById('installBtn');
-const installHelpOverlay = document.getElementById('installHelpOverlay');
-const installHelpBody = document.getElementById('installHelpBody');
-const installHelpCloseBtn = document.getElementById('installHelpCloseBtn');
+const installOverlay = document.getElementById('installOverlay');
+const installBody = document.getElementById('installBody');
+const installCloseBtn = document.getElementById('installCloseBtn');
 const installTryBtn = document.getElementById('installTryBtn');
-const devicePickBtn = document.getElementById('devicePickBtn');
-
-const deviceOverlay = document.getElementById('deviceOverlay');
-const deviceSkipBtn = document.getElementById('deviceSkipBtn');
-
-const DEVICE_KEY = 'OSP_DEVICE_TYPE_V1';  // android | ios | other
-const DEVICE_SKIP_KEY = 'OSP_DEVICE_SKIP_V1';
+const installHelpBtn = document.getElementById('installHelpBtn');
 
 function isIOS(){
   const ua = navigator.userAgent || '';
-  const iOS = /iPhone|iPad|iPod/i.test(ua);
-  const iPadOS13 = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  return iOS || iPadOS13;
+  const isIphone = /iPhone|iPad|iPod/i.test(ua);
+  const isIpadOS = (ua.includes('Mac') && 'ontouchend' in document);
+  return isIphone || isIpadOS;
 }
 function isStandalone(){
+  // iOS: navigator.standalone, reszta: display-mode
   return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (navigator.standalone === true);
 }
-function detectDeviceType(){
-  const stored = localStorage.getItem(DEVICE_KEY);
-  if(stored) return stored;
-  if(isIOS()) return 'ios';
-  const ua = (navigator.userAgent || '').toLowerCase();
-  if(ua.includes('huawei') || ua.includes('honor')) return 'other';
-  return 'android';
-}
-function setDeviceType(t){ localStorage.setItem(DEVICE_KEY, t); }
 
-function showDevicePicker(){ deviceOverlay.style.display = 'flex'; }
-function hideDevicePicker(){ deviceOverlay.style.display = 'none'; }
-
-function showInstallHelp(){
-  const type = detectDeviceType();
-  installHelpOverlay.style.display = 'flex';
+function openInstallOverlay(showHelpOnly=false){
+  if(!installOverlay) return;
+  installOverlay.style.display = 'flex';
+  const ios = isIOS();
+  const https = location.protocol === 'https:' || location.hostname === 'localhost';
   const standalone = isStandalone();
 
   let html = '';
   if(standalone){
-    html += '<b>Aplikacja jest już zainstalowana.</b><br>Jeśli nie widzisz zmian, użyj ADMIN → Serwis (diagnostyka) lub przeładuj.';
-    installTryBtn.style.display = 'none';
+    html = '<b>Aplikacja jest już zainstalowana.</b><br>Jeśli nie widzisz zmian: zamknij aplikację, uruchom ponownie lub wyczyść cache w Safari/Chrome.';
+    if(installTryBtn) installTryBtn.style.display = 'none';
   } else {
-    installTryBtn.style.display = 'inline-block';
-    if(type === 'android'){
-      html += '<b>Android:</b><br>1) Otwórz stronę w Chrome.<br>2) Kliknij „Zainstaluj aplikację” albo menu ⋮ → „Zainstaluj aplikację”.<br>';
-      html += '<span style="opacity:.9">Jeśli przycisk instalacji nie wyskakuje: odśwież stronę i upewnij się, że to Chrome (nie Messenger/FB).</span>';
-    } else if(type === 'ios'){
-      html += '<b>iPhone/iPad (iOS):</b><br>1) Otwórz stronę w Safari.<br>2) Kliknij „Udostępnij” (kwadrat ze strzałką).<br>3) Wybierz „Dodaj do ekranu początkowego”.<br>';
-      html += '<span style="opacity:.9">Na iOS nie ma systemowego „Zainstaluj” jak na Androidzie – to normalne.</span>';
+    if(installTryBtn) installTryBtn.style.display = ios ? 'none' : 'inline-block';
+
+    if(ios){
+      html += '<b>iPhone / iPad (iOS):</b><br>';
+      html += '1) Otwórz stronę w <b>Safari</b>.<br>';
+      html += '2) Kliknij <b>Udostępnij</b> (kwadrat ze strzałką).<br>';
+      html += '3) Wybierz <b>Dodaj do ekranu początkowego</b>.<br>';
+      html += '<span style="opacity:.9">Na iOS nie ma systemowego okna instalacji jak na Androidzie — to normalne.</span>';
     } else {
-      html += '<b>Huawei / inne:</b><br>Najczęściej działa jak Android (Chrome/Edge) lub przez menu przeglądarki → „Dodaj do ekranu startowego”.<br>';
-      html += '<span style="opacity:.9">Jeśli nie widzisz opcji – uruchom stronę w Chrome/Edge.</span>';
+      html += '<b>Android / Huawei / inne:</b><br>';
+      html += 'Najlepiej działa w <b>Chrome</b> lub <b>Edge</b>.<br>';
+      html += 'Menu ⋮ → <b>Zainstaluj aplikację</b> / <b>Dodaj do ekranu głównego</b>.<br>';
+      html += '<span style="opacity:.9">Jeśli nic nie wyskakuje: upewnij się, że to strona online (HTTPS). Lokalny plik (file://) nie zainstaluje PWA.</span>';
+      if(!https){
+        html += '<br><span style="color:#ffb4bc"><b>Uwaga:</b> wykryto brak HTTPS — instalacja „kliknięciem” nie zadziała.</span>';
+      }
     }
   }
-  installHelpBody.innerHTML = html;
+
+  if(installBody) installBody.innerHTML = html;
 }
-function hideInstallHelp(){ installHelpOverlay.style.display = 'none'; }
+
+function closeInstallOverlay(){
+  if(!installOverlay) return;
+  installOverlay.style.display = 'none';
+}
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
 });
 
-installBtn.addEventListener('click', async () => {
-  if(isStandalone()){
-    showInstallHelp();
-    return;
-  }
-  const type = detectDeviceType();
-  if(type === 'android' && deferredPrompt){
-    deferredPrompt.prompt();
-    try { await deferredPrompt.userChoice; } catch(e) {}
-    deferredPrompt = null;
-    return;
-  }
-  showInstallHelp();
-});
+if(installBtn){
+  installBtn.onclick = () => {
+    // zawsze pokaż okno instrukcji — na iOS to jedyna droga
+    openInstallOverlay();
+  };
+}
 
-installHelpCloseBtn.addEventListener('click', hideInstallHelp);
-installTryBtn.addEventListener('click', async () => {
+if(installCloseBtn) installCloseBtn.addEventListener('click', closeInstallOverlay);
+if(installOverlay) installOverlay.addEventListener('click', (e)=>{ if(e.target===installOverlay) closeInstallOverlay(); });
+
+if(installHelpBtn) installHelpBtn.addEventListener('click', () => openInstallOverlay(true));
+
+if(installTryBtn) installTryBtn.addEventListener('click', async () => {
   if(deferredPrompt){
     deferredPrompt.prompt();
     try { await deferredPrompt.userChoice; } catch(e) {}
     deferredPrompt = null;
   } else {
-    showInstallHelp();
+    openInstallOverlay(true);
   }
 });
-devicePickBtn.addEventListener('click', () => {
-  hideInstallHelp();
-  showDevicePicker();
-});
 
-document.querySelectorAll('.deviceCard').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const t = btn.getAttribute('data-device');
-    if(t) setDeviceType(t);
-    hideDevicePicker();
-    showInstallHelp();
-  });
-});
-deviceSkipBtn.addEventListener('click', () => {
-  localStorage.setItem(DEVICE_SKIP_KEY, '1');
-  hideDevicePicker();
-});
-
+// pokaż/ukryj przycisk instalacji
 window.addEventListener('load', () => {
+  if(!installBtn) return;
   if(isStandalone()){
     installBtn.style.display = 'none';
-    return;
-  }
-  installBtn.style.display = 'inline-block';
-  const skipped = localStorage.getItem(DEVICE_SKIP_KEY) === '1';
-  const hasChoice = !!localStorage.getItem(DEVICE_KEY);
-  if(!skipped && !hasChoice){
-    showDevicePicker();
+  } else {
+    installBtn.style.display = 'inline-block';
   }
 });
 
@@ -1198,10 +1109,41 @@ window.addEventListener('orientationchange', updateStickyOffsets);
 loadStore();
 loadContacts();
 renderHotlineBar();
-renderContactsQuick();
 renderContactsEditor();
 updateStickyOffsets();
 render();
 </script>
 </body>
-</html>
+</html
+<!-- Kontakty (telefon) -->
+<div class="overlay" id="contactsOverlay" style="display:none;">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <h3 style="margin:0">Numery alarmowe / operacyjne</h3>
+      <button class="btn small" id="contactsCloseBtn">Zamknij</button>
+    </div>
+    <div class="tiny" style="margin-top:8px">Kliknij kontakt, aby zadzwonić.</div>
+    <div id="contactsQuickList" class="contactsQuickList" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- Instalacja PWA (iOS/Android) -->
+<div class="overlay" id="installOverlay" style="display:none;">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <h3 style="margin:0">Instalacja aplikacji</h3>
+      <button class="btn small" id="installCloseBtn">Zamknij</button>
+    </div>
+    <div id="installBody" class="tiny" style="margin-top:10px;line-height:1.45"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn accent" id="installTryBtn">Spróbuj instalacji</button>
+      <button class="btn" id="installHelpBtn">Pokaż instrukcję</button>
+    </div>
+    <div class="tiny" style="margin-top:10px;opacity:.9">
+      Uwaga: instalacja „jednym kliknięciem” działa tylko online (HTTPS) i najczęściej w Chrome/Edge na Androidzie.
+      Na iOS instalacja odbywa się przez Safari → Udostępnij → Dodaj do ekranu początkowego.
+    </div>
+  </div>
+</div>
+
+>
