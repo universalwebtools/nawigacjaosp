@@ -212,6 +212,9 @@ input[type="file"]{width:100%;}
     <div id="installBody" class="tiny"></div>
     <div class="actions" style="margin-top:12px">
       <button class="btn accent" id="tryInstall">Spróbuj instalacji</button>
+      <button class="btn" id="openSafariBtn">Otwórz w Safari</button>
+      <button class="btn" id="copyLinkBtn">Kopiuj link</button>
+      <button class="btn" id="resetOsBtn">Zmień urządzenie</button>
       <button class="btn" id="closeInstall">Zamknij</button>
     </div>
   </div>
@@ -349,6 +352,7 @@ function updateHeaderH(){
 }
 window.addEventListener('resize', updateHeaderH);
 window.addEventListener('orientationchange', updateHeaderH);
+window.addEventListener('load', updateHeaderH);
 
 const tabsEl = document.getElementById('tabs');
 const gridEl = document.getElementById('grid');
@@ -456,12 +460,64 @@ document.getElementById('osOther').onclick=()=>{ setOs('other'); osOverlay.style
 document.getElementById('osSkip').onclick=()=>{ setOs(autoDetectOs()); osOverlay.style.display='none'; };
 osOverlay.addEventListener('click',(e)=>{ if(e.target===osOverlay) osOverlay.style.display='none'; });
 
+
+function isSafari(){
+  const ua = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+  const isWebKit = /applewebkit/i.test(ua);
+  const isCriOS = /crios/i.test(ua);
+  const isFxiOS = /fxios/i.test(ua);
+  const isEdgiOS = /edgios/i.test(ua);
+  const isOPiOS = /opios/i.test(ua);
+  return isIOS && isWebKit && !(isCriOS || isFxiOS || isEdgiOS || isOPiOS);
+}
+function isInAppBrowser(){
+  const ua = (navigator.userAgent || '').toLowerCase();
+  return ua.includes('whatsapp') || ua.includes('instagram') || ua.includes('fbav') || ua.includes('fban') || ua.includes('messenger');
+}
+async function copyToClipboard(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    return true;
+  }catch(e){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position='fixed';
+      ta.style.left='-9999px';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e2){
+      return false;
+    }
+  }
+}
+
 // Install
 let deferredPrompt = null;
 const installOverlay = document.getElementById('installOverlay');
 const installBody = document.getElementById('installBody');
 const tryInstallBtn = document.getElementById('tryInstall');
 document.getElementById('closeInstall').onclick=()=>installOverlay.style.display='none';
+
+document.getElementById('openSafariBtn').onclick = () => {
+  // Best effort: open same URL in a new tab; user may still need to choose Safari from share/menu.
+  window.open(location.href, '_blank');
+};
+document.getElementById('copyLinkBtn').onclick = async () => {
+  const ok = await copyToClipboard(location.href);
+  if(ok) alert('Link skopiowany. Wklej go w Safari i dodaj do ekranu początkowego.');
+  else alert('Nie udało się skopiować. Skopiuj link ręcznie z paska adresu.');
+};
+document.getElementById('resetOsBtn').onclick = () => {
+  localStorage.removeItem(OS_KEY);
+  installOverlay.style.display='none';
+  setTimeout(()=>{ showOsPickerIfNeeded(); }, 150);
+};
+
 installOverlay.addEventListener('click',(e)=>{ if(e.target===installOverlay) installOverlay.style.display='none'; });
 
 function inStandalone(){ return window.matchMedia && window.matchMedia('(display-mode: standalone)').matches; }
@@ -473,24 +529,47 @@ window.addEventListener('beforeinstallprompt',(e)=>{
 });
 
 function openInstallHelp(){ 
-  if(inStandalone()){ 
+  const os = getOs() || autoDetectOs();
+
+  // default buttons
+  tryInstallBtn.style.display = 'none';
+  document.getElementById('openSafariBtn').style.display = 'none';
+  document.getElementById('copyLinkBtn').style.display = 'inline-block';
+  document.getElementById('resetOsBtn').style.display = 'inline-block';
+
+  if(inStandalone()){
     installBody.textContent = 'Aplikacja jest już zainstalowana (tryb PWA).';
     tryInstallBtn.style.display='none';
+    document.getElementById('openSafariBtn').style.display = 'none';
+    document.getElementById('copyLinkBtn').style.display = 'none';
     installOverlay.style.display='flex';
     return;
   }
-  const os = getOs() || autoDetectOs();
-  if(os==='ios' || isIOS()){ 
-    installBody.innerHTML = 'iOS nie pokazuje okna instalacji. Otwórz w <strong>Safari</strong> → <strong>Udostępnij</strong> → <strong>Dodaj do ekranu początkowego</strong>.';
-    tryInstallBtn.style.display='none';
-  } else {
-    if(deferredPrompt){ 
-      installBody.textContent = 'Android: możesz spróbować instalacji teraz.';
-      tryInstallBtn.style.display='inline-block';
+
+  // iOS: must use Safari + Add to Home Screen
+  if(os==='ios' || /iphone|ipad|ipod/i.test(navigator.userAgent||'')){
+    if(isInAppBrowser() || !isSafari()){
+      installBody.innerHTML =
+        'W tej przeglądarce (np. WhatsApp/Instagram) instalacja PWA nie zadziała.<br><br>' +
+        '1) Kliknij <strong>Otwórz w Safari</strong> (albo użyj menu/udostępniania → Otwórz w Safari).<br>' +
+        '2) W Safari wybierz <strong>Udostępnij</strong> → <strong>Dodaj do ekranu początkowego</strong>.';
+      document.getElementById('openSafariBtn').style.display = 'inline-block';
     } else {
-      installBody.innerHTML = 'Android/Huawei: jeśli nie wyskakuje okno instalacji, użyj menu (⋮) → <strong>Dodaj do ekranu głównego</strong>. Działa najlepiej na HTTPS (GitHub Pages/Firebase).';
-      tryInstallBtn.style.display='none';
+      installBody.innerHTML =
+        'iOS: w Safari wybierz <strong>Udostępnij</strong> (kwadrat ze strzałką) → <strong>Dodaj do ekranu początkowego</strong>.';
     }
+    installOverlay.style.display='flex';
+    return;
+  }
+
+  // Android/Huawei
+  if(deferredPrompt){
+    installBody.textContent = 'Android: możesz spróbować instalacji teraz.';
+    tryInstallBtn.style.display = 'inline-block';
+  } else {
+    installBody.innerHTML =
+      'Jeśli nie wyskakuje okno instalacji: menu (⋮) → <strong>Dodaj do ekranu głównego</strong>.<br><br>' +
+      'Wskazówka: działa najlepiej na Chrome i HTTPS (GitHub Pages/Firebase).';
   }
   installOverlay.style.display='flex';
 }
