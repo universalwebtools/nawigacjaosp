@@ -171,31 +171,6 @@ input[type="file"]{width:100%;}
 }
 
 
-.seg{
-  display:flex;
-  gap:0;
-  border-radius:14px;
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.14);
-  background:#1c1f26;
-  height:44px;
-}
-.segBtn{
-  border:0;
-  background:transparent;
-  color:#fff;
-  font-weight:900;
-  width:44px;
-  height:44px;
-  cursor:pointer;
-}
-.segBtn:hover{ filter:brightness(1.12); }
-.segBtn.active{
-  background:linear-gradient(180deg,var(--accent2),var(--accent));
-  color:#0b0d12;
-}
-@media (max-width:560px){
-  .seg{ height:40px; border-radius:12px; }
   .segBtn{ width:40px; height:40px; }
 }
 
@@ -252,13 +227,6 @@ input[type="file"]{width:100%;}
 
       <div class="controls">
         <input id="searchInput" type="search" placeholder="Szukaj numeru lub opisu (np. 41, szkoła)">
-        <div class="seg" id="viewSeg" title="Widok siatki">
-          <button class="segBtn" data-cols="2">2</button>
-          <button class="segBtn" data-cols="3">3</button>
-          <button class="segBtn" data-cols="5">5</button>
-        </div>
-        <button class="btn" id="btnMode">TRYB: KIEROWCA</button>
-        <button class="btn" id="btnNear">NAJBLIŻSZE</button>
         <button class="btn" id="btnNumbers">NUMERY</button>
         <button class="btn" id="btnAdmin">ADMIN</button>
         <button class="btn" id="btnMap">MAPA e-remiza</button>
@@ -412,10 +380,6 @@ input[type="file"]{width:100%;}
     </div>
     <div style="height:10px"></div>
     <a class="gm" id="detailLink" href="#" target="_blank" rel="noopener">Otwórz nawigację</a>
-    <div class="tiny" id="detailUrlBox" style="margin-top:6px;display:none;word-break:break-word"></div>
-    <div class="actions" id="detailCmdActions" style="margin-top:8px;display:none">
-      <button class="btn full" id="detailCopyBtn">Kopiuj link</button>
-    </div>
     <div style="height:10px"></div>
     <button class="btn accent" id="detailActionBtn" style="width:100%;height:50px">RUSZAJ DO AKCJI</button>
     <div class="tiny" id="detailMissing" style="margin-top:10px;display:none">Brak linku – numer oznaczony jako NIE ISTNIEJE.</div>
@@ -423,20 +387,6 @@ input[type="file"]{width:100%;}
 </div>
 
 
-<!-- Nearest (GPS) -->
-<div class="overlay" id="nearOverlay">
-  <div class="modal">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-      <h2 style="margin:0">Najbliższe numery</h2>
-      <button class="btn small" id="nearCloseBtn">Zamknij</button>
-    </div>
-    <div class="tiny" id="nearStatus" style="margin-top:6px">Kliknij „Skanuj GPS”, aby znaleźć najbliższe numery.</div>
-    <div class="actions" style="margin-top:12px">
-      <button class="btn accent full" id="nearScanBtn">Skanuj GPS</button>
-    </div>
-    <div id="nearList" class="auditList" style="margin-top:10px"></div>
-  </div>
-</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
@@ -446,8 +396,6 @@ const ADMIN_PASSWORD = 'pako14';
 const STORE_KEY = 'OSP_LAZY_DATA_MOBILE_V1';
 const CONTACTS_KEY = 'OSP_LAZY_CONTACTS_V2';
 const OS_KEY = 'OSP_LAZY_OS_V1';
-const MODE_KEY = 'OSP_LAZY_MODE_V1';
-const VIEWCOLS_KEY = 'OSP_LAZY_VIEWCOLS_V1';
 
 const DEFAULT_CONTACTS = [{"label": "MSK – nienagrywany", "tel": "502 204 998"}, {"label": "MSK – meldunkowy", "tel": "33 811 38 47"}, {"label": "112", "tel": "112"}, {"label": "991 energetyka", "tel": "991"}, {"label": "992 gazowe", "tel": "992"}, {"label": "993 ciepłownicze", "tel": "993"}, {"label": "994 wod-kan", "tel": "994"}];
 
@@ -531,27 +479,6 @@ function openDetail(item){
   const extra = (item.label||'').replace(String(item.n),'').trim();
   detailSub.textContent = extra ? extra : '';
   detailQrImg.src = item.img || '';
-
-  // Dowódca: pokaż link + kopiowanie
-  const urlBox = document.getElementById('detailUrlBox');
-  const cmdActions = document.getElementById('detailCmdActions');
-  const copyBtn = document.getElementById('detailCopyBtn');
-  if(MODE === 'commander' && actionUrl){
-    urlBox.style.display='block';
-    cmdActions.style.display='grid';
-    urlBox.textContent = actionUrl;
-    copyBtn.onclick = async () => {
-      try{
-        await navigator.clipboard.writeText(actionUrl);
-        alert('Skopiowano link');
-      }catch(e){
-        alert('Nie udało się skopiować. Skopiuj ręcznie.');
-      }
-    };
-  } else {
-    urlBox.style.display='none';
-    cmdActions.style.display='none';
-  }
 
   if(missing){
     detailLink.style.display = 'none';
@@ -802,136 +729,6 @@ tryInstallBtn.onclick = async () => {
 
 document.getElementById('btnInstall').onclick = openInstallHelp;
 
-// ===== Tryb: Kierowca / Dowódca =====
-let MODE = localStorage.getItem(MODE_KEY) || 'driver'; // driver | commander
-function setViewCols(cols, silent){
-  const c = Math.max(2, Math.min(5, Number(cols)||5));
-  document.documentElement.style.setProperty('--mcols', String(c));
-  localStorage.setItem(VIEWCOLS_KEY, String(c));
-  document.querySelectorAll('#viewSeg .segBtn').forEach(b=>{
-    b.classList.toggle('active', Number(b.dataset.cols) === c);
-  });
-  if(!silent) render();
-}
-function applyMode(){
-  const btn = document.getElementById('btnMode');
-  if(btn){
-    btn.textContent = 'TRYB: ' + (MODE === 'commander' ? 'DOWÓDCA' : 'KIEROWCA');
-  }
-  document.body.classList.toggle('mode-commander', MODE === 'commander');
-
-  if(!localStorage.getItem(VIEWCOLS_KEY)){
-    setViewCols(MODE === 'commander' ? 3 : 5, true);
-  }
-}
-document.getElementById('btnMode').onclick = () => {
-  MODE = (MODE === 'commander') ? 'driver' : 'commander';
-  localStorage.setItem(MODE_KEY, MODE);
-  applyMode();
-  render();
-};
-
-// ===== Widok siatki: 2/3/5 =====
-document.querySelectorAll('#viewSeg .segBtn').forEach(b=>{
-  b.onclick = ()=> setViewCols(b.dataset.cols);
-});
-const storedCols = Number(localStorage.getItem(VIEWCOLS_KEY));
-if(storedCols) setViewCols(storedCols, true);
-
-// ===== Najbliższe numery (GPS) =====
-const nearOverlay = document.getElementById('nearOverlay');
-const nearList = document.getElementById('nearList');
-const nearStatus = document.getElementById('nearStatus');
-document.getElementById('nearCloseBtn').onclick = () => nearOverlay.style.display='none';
-nearOverlay.addEventListener('click',(e)=>{ if(e.target===nearOverlay) nearOverlay.style.display='none'; });
-
-function extractCoordsFromText(text){
-  const s = String(text||'');
-  const re = /(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/g;
-  let m; const all=[];
-  while((m=re.exec(s))!==null){
-    const lat = parseFloat(m[1]); const lng = parseFloat(m[2]);
-    if(Number.isFinite(lat) && Number.isFinite(lng)) all.push({lat,lng});
-  }
-  return all.find(c => c.lat>48 && c.lat<51 && c.lng>17 && c.lng<20) || all[0] || null;
-}
-function getItemCoords(item){
-  const lat = item.lat ? parseFloat(String(item.lat).replace(',','.')) : NaN;
-  const lng = item.lng ? parseFloat(String(item.lng).replace(',','.')) : NaN;
-  if(Number.isFinite(lat) && Number.isFinite(lng)) return {lat,lng};
-  return extractCoordsFromText(item.navUrl || item.url || '');
-}
-function haversine(a,b){
-  const R=6371000;
-  const toRad = (x)=>x*Math.PI/180;
-  const dLat = toRad(b.lat-a.lat);
-  const dLng = toRad(b.lng-a.lng);
-  const s1 = Math.sin(dLat/2)**2 + Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
-  return 2*R*Math.asin(Math.min(1, Math.sqrt(s1)));
-}
-function fmtDist(m){
-  if(m<1000) return Math.round(m)+' m';
-  return (m/1000).toFixed(m<5000?2:1).replace('.',',')+' km';
-}
-async function getPosition(){
-  return await new Promise((resolve,reject)=>{
-    if(!navigator.geolocation) return reject(new Error('Brak GPS'));
-    navigator.geolocation.getCurrentPosition(
-      (pos)=>resolve(pos),
-      (err)=>reject(err),
-      {enableHighAccuracy:true, timeout:12000, maximumAge:30000}
-    );
-  });
-}
-function openNearest(){
-  nearOverlay.style.display='flex';
-  nearStatus.textContent = 'Kliknij „Skanuj GPS”, aby znaleźć najbliższe numery.';
-  nearList.innerHTML = '';
-}
-document.getElementById('btnNear').onclick = openNearest;
-
-document.getElementById('nearScanBtn').onclick = async () => {
-  nearStatus.textContent = 'Pobieram lokalizację…';
-  nearList.innerHTML = '';
-  try{
-    const pos = await getPosition();
-    const me = {lat: pos.coords.latitude, lng: pos.coords.longitude};
-    const scored = [];
-    for(const item of DATA){
-      const c = getItemCoords(item);
-      if(!c) continue;
-      const d = haversine(me, c);
-      scored.push({item, d});
-    }
-    if(!scored.length){
-      nearStatus.textContent = 'Brak współrzędnych w linkach. Użyj linków typu geo:lat,lng lub ...?q=lat,lng.';
-      return;
-    }
-    scored.sort((x,y)=>x.d-y.d);
-    nearStatus.textContent = 'Najbliższe numery (kliknij, aby otworzyć):';
-    scored.slice(0, 15).forEach(({item,d})=>{
-      const btn = document.createElement('button');
-      btn.className = 'auditRow';
-      const left = document.createElement('div');
-      left.style.flex='1';
-      left.innerHTML = '<div style="font-weight:900">Nr '+item.n+'</div>' +
-        '<div style="color:var(--muted);font-size:11px">'+ ((item.label||'').replace(String(item.n),'').trim() || '') + '</div>';
-      const badge = document.createElement('div');
-      badge.className='auditBadge';
-      badge.textContent = fmtDist(d);
-      btn.appendChild(left); btn.appendChild(badge);
-      btn.onclick = () => {
-        rangeIndex = pickRange(item.n);
-        render();
-        if(typeof openDetail === 'function') openDetail(item);
-        nearOverlay.style.display='none';
-      };
-      nearList.appendChild(btn);
-    });
-  }catch(e){
-    nearStatus.textContent = 'Brak dostępu do lokalizacji. Włącz GPS i zezwól przeglądarce na lokalizację.';
-  }
-};
 
 
 // Contacts overlay
@@ -1210,7 +1007,6 @@ document.getElementById('contactSaveBtn').onclick=()=>{
 
 // Start
 loadStore();
-applyMode();
 updateHeaderH();
 render();
 renderContactsDial();
